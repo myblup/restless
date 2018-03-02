@@ -286,6 +286,8 @@ class Resource(object):
             data = view_method(*args, **kwargs)
             serialized = self.serialize(method, endpoint, data)
         except Exception as err:
+            if self.bubble_exceptions():
+                raise
             return self.handle_error(err)
 
         status = self.status_map.get(self.http_methods[endpoint][method], OK)
@@ -302,9 +304,6 @@ class Resource(object):
 
         :returns: A response object
         """
-        if self.bubble_exceptions():
-            raise err
-
         return self.build_error(err)
 
     def deserialize(self, method, endpoint, body):
