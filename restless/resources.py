@@ -1,5 +1,6 @@
 from functools import wraps
 import sys
+import six
 
 from .constants import OK, CREATED, ACCEPTED, NO_CONTENT
 from .data import Data
@@ -189,7 +190,7 @@ class Resource(object):
         """
         raise NotImplementedError()
 
-    def build_error(self, err):
+    def build_error(self, err, exc_info=None):
         """
         When an exception is encountered, this generates a JSON error message
         for display to the user.
@@ -206,7 +207,11 @@ class Resource(object):
 
         if self.is_debug():
             # Add the traceback.
-            data['traceback'] = format_traceback(sys.exc_info())
+            if exc_info is None:
+                exc_info = sys.exc_info()
+            data['traceback'] = format_traceback(exc_info)
+            # avoid keeping a reference to the traceback
+            del exc_info
 
         body = self.serializer.serialize(data)
         status = getattr(err, 'status', 500)
@@ -286,14 +291,12 @@ class Resource(object):
             data = view_method(*args, **kwargs)
             serialized = self.serialize(method, endpoint, data)
         except Exception as err:
-            if self.bubble_exceptions():
-                raise
-            return self.handle_error(err)
+            return self.handle_error(err, sys.exc_info())
 
         status = self.status_map.get(self.http_methods[endpoint][method], OK)
         return self.build_response(serialized, status=status)
 
-    def handle_error(self, err):
+    def handle_error(self, err, exc_info=None):
         """
         When an exception is encountered, this generates a serialized error
         message to return the user.
@@ -304,7 +307,12 @@ class Resource(object):
 
         :returns: A response object
         """
-        return self.build_error(err)
+        if self.bubble_exceptions():
+            if exc_info is None:
+                exc_info = sys.exc_info()
+            six.reraise(*exc_info)
+
+        return self.build_error(err, exc_info)
 
     def deserialize(self, method, endpoint, body):
         """

@@ -1,3 +1,4 @@
+import sys
 from tornado import web, gen
 from .constants import OK, NO_CONTENT
 from .resources import Resource
@@ -171,7 +172,7 @@ class TornadoResource(Resource):
                 data = yield data
             serialized = self.serialize(method, endpoint, data)
         except Exception as err:
-            raise gen.Return(self.handle_error(err))
+            raise gen.Return(self.handle_error(err, sys.exc_info()))
 
         status = self.status_map.get(self.http_methods[endpoint][method], OK)
         raise gen.Return(self.build_response(serialized, status=status))

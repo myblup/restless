@@ -39,12 +39,12 @@ class DjangoResource(Resource):
         resp = HttpResponse(data, content_type=content_type, status=status)
         return resp
 
-    def build_error(self, err):
+    def build_error(self, err, exc_info=None):
         # A bit nicer behavior surrounding things that don't exist.
         if isinstance(err, (ObjectDoesNotExist, Http404)):
             err = NotFound(msg=six.text_type(err))
 
-        return super(DjangoResource, self).build_error(err)
+        return super(DjangoResource, self).build_error(err, exc_info)
 
     @classmethod
     def build_url_name(cls, name, name_prefix=None):
